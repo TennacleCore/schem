@@ -45,6 +45,14 @@ final class MCEditSchematicReader implements SchematicReader {
         }
     }
 
+    // the pre-1.13 id is the tile entity's own name ("Trap", "DLDetector"), which matches no handler: the block
+    // already sitting at the position is the modern key those names were flattened into
+    private static String blockEntityId(List<Block> palette, int[] blocks, int index, String legacyId) {
+        if (index < 0 || index >= blocks.length) return legacyId;
+        var block = palette.get(blocks[index]);
+        return block.key().asString();
+    }
+
     public Schematic read(Map.Entry<String, CompoundBinaryTag> rootPair) {
         assertTrue("Schematic".equals(rootPair.getKey()), "missing required root tag 'Schematic'");
         var root = rootPair.getValue();
@@ -94,7 +102,8 @@ final class MCEditSchematicReader implements SchematicReader {
             var id = getRequired(base, "id", BinaryTagTypes.STRING).value();
             var pos = getRequiredVec3(base, "");
             var data = base.remove("id").remove("x").remove("y").remove("z");
-            blockEntities.put(blockIndex(size, pos), new BlockEntityData(id, pos,
+            int index = blockIndex(size, pos);
+            blockEntities.put(index, new BlockEntityData(blockEntityId(updatedPalette, updatedBlockData, index, id), pos,
                     // Always try to upgrade since this is always a legacy format
                     gameData.upgradeBlockEntity(GameDataProvider.DATA_VERSION_UNKNOWN, gameData.dataVersion(), id, data)));
         }
